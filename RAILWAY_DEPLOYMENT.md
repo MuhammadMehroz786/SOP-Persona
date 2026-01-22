@@ -25,7 +25,8 @@ In your Railway project settings, add the following environment variables:
 # Required - OpenAI API Key
 OPENAI_API_KEY=sk-your-actual-openai-api-key-here
 
-# Database Configuration (Non-persistent SQLite)
+# Database Configuration (File-based SQLite - more stable than in-memory)
+# Note: Data will still be lost on Railway restarts (ephemeral filesystem)
 DATABASE_URL=file:./prisma/dev.db
 
 # Application Configuration
@@ -84,10 +85,30 @@ If you need persistent storage, consider upgrading to PostgreSQL:
 - Verify Puppeteer environment variables are set
 - Check Railway logs for Chromium-related errors
 
-### Database Errors
+### Database Errors ("table does not exist")
 
-- Run the database initialization manually: `npm run db:init`
-- Check Prisma schema compatibility with SQLite
+If you see errors like "The table `main.SOP` does not exist":
+
+1. **Check Railway Logs**: Ensure the `npm run db:init` command ran successfully during deployment
+2. **Look for these log messages**:
+   ```
+   🚀 Initializing database...
+   🔧 Generating Prisma client...
+   🔄 Pushing database schema...
+   ✅ Database schema created successfully
+   🎉 Database initialization complete!
+   ```
+3. **If initialization failed**: Trigger a fresh deployment (not just restart)
+4. **Verify DATABASE_URL**: Should be `file:./prisma/dev.db` (not in-memory)
+5. **Manual fix**: In Railway dashboard, run custom start command:
+   ```bash
+   npm run db:init && npm start
+   ```
+
+Common causes:
+- DATABASE_URL not set or using `:memory:` (unstable on Railway)
+- Build process didn't complete successfully
+- Prisma client not generated properly
 
 ## Monitoring and Logs
 
