@@ -1,0 +1,178 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model SOP {
+  id          String   @id @default(cuid())
+  title       String
+  description String   // User's brief input for AI generation
+  content     String   // Full SOP content (JSON)
+  category    String?
+  status      String   @default("draft")  // draft, approved, archived
+  version     String   @default("1.0")
+
+  // AI Generation metadata
+  industry    String   @default("general")  // healthcare, manufacturing, IT, finance, laboratory, general
+  tone        String   @default("formal")  // formal, technical, simple, friendly
+  language    String   @default("en")  // en, es, fr, de, zh
+  aiPromptUsed String?  // Store the prompt used for regeneration
+
+  // Compliance & Quality fields
+  regulatoryFramework String?  // Comma-separated: "ISO 9001,FDA 21 CFR Part 11,GMP"
+  effectiveDate       DateTime?
+  reviewDate          DateTime?
+  expirationDate      DateTime?
+
+  // Effectiveness Tracking
+  incidentCount   Int      @default(0)
+  complianceScore Float?
+
+  // Custom Branding (JSON)
+  customBranding  String?  // JSON for logo URL, colors, etc.
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  sopId     String
+  action    String   // created, updated, approved, archived, exported
+  changes   String?  // JSON: before/after for updates
+  timestamp DateTime @default(now())
+
+  @@index([sopId])
+  @@index([timestamp])
+}
+
+// ==================== PERSONA GPT MODELS ====================
+
+model Persona {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  // Brief overview
+
+  // Basic Information
+  age         Int?
+  occupation  String?
+  background  String?  // Long-form background story
+  avatarUrl   String?
+
+  // Voice Characteristics (JSON)
+  voiceProfile String?  // JSON: {speakingStyle, vocabularyLevel, sentenceStructure, catchphrases, speechRhythm}
+
+  // Core Beliefs & Values (JSON)
+  beliefs     String?  // JSON: {political, religious, moral, philosophy, principles}
+
+  // Tone Profile (JSON)
+  toneProfile String?  // JSON: {defaultMood, emotionalRange, humorStyle, formalityLevel}
+
+  // Behavioral Patterns (JSON)
+  behaviors   String?  // JSON: {decisionMaking, conflictResponse, socialPreferences, workEthic, copingMechanisms}
+
+  // Metadata
+  category    String?  // novelist, educator, marketer, editorial, custom
+  isPrebuilt  Boolean  @default(false)  // Malcolm, Ron, Winston, Ana
+  tags        String?  // Comma-separated tags
+
+  // Usage tracking
+  usageCount  Int      @default(0)
+  lastUsed    DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  responses   PersonaResponse[]
+  scenarios   PersonaScenario[]
+
+  @@index([category])
+  @@index([isPrebuilt])
+  @@index([createdAt])
+}
+
+model PersonaScenario {
+  id          String   @id @default(cuid())
+  personaId   String
+
+  // Scenario Details
+  title       String
+  description String
+  context     String?  // Additional context variables
+  scenarioType String  // business_meeting, conversation, crisis, debate, teaching, emotional, creative, customer_service
+
+  // Input/Output
+  input       String   // The scenario prompt
+  response    String?  // Generated response
+
+  // Metadata
+  relationshipContext String?  // Who else is involved
+  emotionalState     String?  // Current emotional state
+  stressLevel        Int?     // 1-10
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  persona     Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  @@index([personaId])
+  @@index([scenarioType])
+  @@index([createdAt])
+}
+
+model PersonaResponse {
+  id          String   @id @default(cuid())
+  personaId   String
+
+  // Generation details
+  prompt      String   // What was asked
+  response    String   // Generated content
+  contentType String   // dialogue, email, social_post, blog, script, decision
+
+  // Context
+  scenario    String?  // Brief scenario description
+  targetAudience String?
+
+  // Quality metrics
+  rating      Int?     // 1-5 user rating
+  feedback    String?  // User feedback
+
+  createdAt   DateTime @default(now())
+
+  persona     Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  @@index([personaId])
+  @@index([contentType])
+  @@index([createdAt])
+}
+
+model UseCaseTemplate {
+  id          String   @id @default(cuid())
+
+  // Template info
+  name        String
+  description String
+  category    String   // novelist, educator, marketer
+  icon        String?  // Emoji or icon name
+
+  // Template structure (JSON)
+  fields      String   // JSON array of field definitions
+  prompts     String   // JSON array of prompt templates
+
+  // Usage
+  usageCount  Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
